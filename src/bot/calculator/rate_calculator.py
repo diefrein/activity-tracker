@@ -1,5 +1,4 @@
 
-
 def calculate_water_rate(weigth: float, activity_minutes: float) -> float:
     return weigth * 30 + activity_minutes / 30 * 500
     
