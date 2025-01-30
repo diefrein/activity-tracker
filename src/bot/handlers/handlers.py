@@ -4,6 +4,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
 from storage.states import UserForm
+from calculator.rate_calculator import calculate_water_rate, calculate_calory_rate
 
 user_data = {}
 
@@ -57,6 +58,16 @@ async def start_handler(msg: Message, state: FSMContext):
     data = await state.get_data()
     chat_id = data.get("chat_id")
     data.pop("chat_id")
+    
+    weigth = float(data["weigth"])
+    activity_minutes = float(data["activity_minutes"])
+    heigth = float(data["heigth"])
+    age = int(data["age"])
+
+    water_rate = calculate_water_rate(weigth, activity_minutes)
+    calory_rate = calculate_calory_rate(weigth, heigth, age, activity_minutes)
+    data["water_rate"] = water_rate
+    data["calory_rate"] = calory_rate
     
     global user_data
     user_data[chat_id] = data
