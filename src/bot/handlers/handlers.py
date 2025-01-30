@@ -2,6 +2,7 @@ from aiogram import types, F, Router
 from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+import logging
 
 from storage.states import UserForm
 from calculator.rate_calculator import calculate_water_rate, calculate_calory_rate
@@ -67,12 +68,14 @@ async def start_handler(msg: Message, state: FSMContext):
     water_rate = calculate_water_rate(weigth, activity_minutes)
     calory_rate = calculate_calory_rate(weigth, heigth, age, activity_minutes)
     data["water_rate"] = water_rate
+    data["current_water"] = 0
     data["calory_rate"] = calory_rate
+    data["current_calory"] = 0
     
     global user_data
     user_data[chat_id] = data
 
-    await msg.answer(f"Ваш профиль = {user_data}")
+    await msg.answer(f"Ваш профиль = {data}")
     await state.clear()
     
 @router.message(Command("profile"))
@@ -81,3 +84,46 @@ async def start_handler(msg: Message):
         await msg.answer(f"Ваш профиль = {user_data[msg.chat.id]}")
     else:
         await msg.answer(f"У вас нет активного профиля. Для создания выполните команду /set_profile")
+        
+@router.message(Command("log_water"))
+async def start_handler(msg: Message):
+    if (msg.chat.id not in user_data.keys()):
+        await msg.answer(f"У вас нет активного профиля. Для создания выполните команду /set_profile")
+        return
+    data = user_data[msg.chat.id]
+    
+    water = float(msg.text.split()[1])
+    current_water = float(data["current_water"]) + water
+    data["current_water"] = current_water
+    water_remain = float(data["water_rate"]) - current_water
+    
+    if (water_remain <= 0):
+        await msg.answer(f"Норма воды выполнена")
+    else:
+        await msg.answer(f"Текущее количество выпитой воды: {current_water}, осталось для выполнения нормы: {water_remain}")
+    
+@router.message(Command("load_test_user"))
+async def start_handler(msg: Message):
+
+    weigth = 75
+    heigth = 180
+    age = 24
+    city = "Moscow"
+    activity_minutes = 30
+
+    data = {}
+    water_rate = calculate_water_rate(weigth, activity_minutes)
+    calory_rate = calculate_calory_rate(weigth, heigth, age, activity_minutes)
+    data["water_rate"] = water_rate
+    data["current_water"] = 0
+    data["calory_rate"] = calory_rate
+    data["current_calory"] = 0
+    
+    data["name"] = "Кирилл"
+    data["city"] = city
+    
+    global user_data
+    user_data[257377723] = data
+
+    await msg.answer(f"Ваш профиль = {user_data}")
+    
