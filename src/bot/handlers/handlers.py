@@ -124,6 +124,33 @@ async def log_workout(msg: Message):
    
     await msg.answer(message)
     
+@router.message(Command("check_progress"))
+async def check_progress(msg: Message):
+    if (msg.chat.id not in user_data.keys()):
+        await msg.answer(f"У вас нет активного профиля. Для создания выполните команду /set_profile")
+        return
+    data = user_data[msg.chat.id]
+    
+    current_water = data["current_water"]
+    remain_water = data["water_rate"] - current_water
+    
+    current_calory = data["current_calory"]
+    calory_rate = data["calory_rate"]
+    burnt_calory = data["burnt_calory"]
+    
+    message = f"""
+    Прогресс:
+    Вода:
+    - Выпито: {int(current_water)} мл из {int(data["water_rate"])} мл.
+    - Осталось: {int(remain_water)} мл.
+    
+    Калории:
+    - Потреблено: {int(current_calory)} ккал из {int(calory_rate)} ккал.
+    - Сожжено: {int(burnt_calory)} ккал.
+    - Баланс: {int(current_calory - burnt_calory)} ккал.
+    """
+    await msg.answer(message)
+    
 @router.message(Command("load_test_user"))
 async def load_test_user(msg: Message):
 
