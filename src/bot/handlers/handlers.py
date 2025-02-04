@@ -1,3 +1,4 @@
+import random
 from aiogram import types, F, Router
 from aiogram.types import Message
 from aiogram.filters import Command
@@ -12,49 +13,49 @@ user_data = {}
 router = Router()
 
 @router.message(Command("set_profile"))
-async def start_handler(msg: Message, state: FSMContext):
+async def set_profile(msg: Message, state: FSMContext):
     await msg.answer("Введите имя пользователя:")
     await state.update_data(chat_id=msg.chat.id)
     await state.set_state(UserForm.name)
     
 @router.message(UserForm.name)
-async def start_handler(msg: Message, state: FSMContext):
+async def name(msg: Message, state: FSMContext):
     await state.update_data(name=msg.text)
     await msg.answer("Введите ваш вес (в кг):")
     await state.set_state(UserForm.weigth)
     
 @router.message(UserForm.weigth)
-async def start_handler(msg: Message, state: FSMContext):
+async def weigth(msg: Message, state: FSMContext):
     await state.update_data(weigth=msg.text)
     await msg.answer("Введите ваш рост:")
     await state.set_state(UserForm.heigth)
     
 @router.message(UserForm.heigth)
-async def start_handler(msg: Message, state: FSMContext):
+async def heigth(msg: Message, state: FSMContext):
     await state.update_data(heigth=msg.text)
     await msg.answer("Введите ваш возраст:")
     await state.set_state(UserForm.age)
     
 @router.message(UserForm.age)
-async def start_handler(msg: Message, state: FSMContext):
+async def age(msg: Message, state: FSMContext):
     await state.update_data(age=msg.text)
     await msg.answer("Какое среднее время вашей дневной активности (в минутах):")
     await state.set_state(UserForm.activity_minutes)
     
 @router.message(UserForm.activity_minutes)
-async def start_handler(msg: Message, state: FSMContext):
+async def activity_minutes(msg: Message, state: FSMContext):
     await state.update_data(activity_minutes=msg.text)
     await msg.answer("Введите населенный пункт, в котором вы проживаете:")
     await state.set_state(UserForm.city)
     
 @router.message(UserForm.city)
-async def start_handler(msg: Message, state: FSMContext):
+async def city(msg: Message, state: FSMContext):
     await state.update_data(city=msg.text)
     await msg.answer("Введите вашу цель по калориям (оставьте пустым для автоматического расчета):")
     await state.set_state(UserForm.calory_target)
     
 @router.message(UserForm.calory_target)
-async def start_handler(msg: Message, state: FSMContext):
+async def calory_target(msg: Message, state: FSMContext):
     await state.update_data(calory_target=msg.text)
     data = await state.get_data()
     chat_id = data.get("chat_id")
@@ -71,6 +72,7 @@ async def start_handler(msg: Message, state: FSMContext):
     data["current_water"] = 0
     data["calory_rate"] = calory_rate
     data["current_calory"] = 0
+    data["burnt_calory"] = 0
     
     global user_data
     user_data[chat_id] = data
@@ -79,14 +81,14 @@ async def start_handler(msg: Message, state: FSMContext):
     await state.clear()
     
 @router.message(Command("profile"))
-async def start_handler(msg: Message):
+async def profile(msg: Message):
     if (msg.chat.id in user_data.keys()):
         await msg.answer(f"Ваш профиль = {user_data[msg.chat.id]}")
     else:
         await msg.answer(f"У вас нет активного профиля. Для создания выполните команду /set_profile")
         
 @router.message(Command("log_water"))
-async def start_handler(msg: Message):
+async def log_water(msg: Message):
     if (msg.chat.id not in user_data.keys()):
         await msg.answer(f"У вас нет активного профиля. Для создания выполните команду /set_profile")
         return
@@ -101,9 +103,29 @@ async def start_handler(msg: Message):
         await msg.answer(f"Норма воды выполнена")
     else:
         await msg.answer(f"Текущее количество выпитой воды: {current_water}, осталось для выполнения нормы: {water_remain}")
+        
+@router.message(Command("log_workout"))
+async def log_workout(msg: Message):
+    if (msg.chat.id not in user_data.keys()):
+        await msg.answer(f"У вас нет активного профиля. Для создания выполните команду /set_profile")
+        return
+    data = user_data[msg.chat.id]
+    
+    workout_type = msg.text.split()[1]
+    workout_duration = float(msg.text.split()[2])
+    burnt_calory = (1 + random.uniform(0.1, 0.5)) * 200 * workout_duration / 30
+    
+    data["burnt_calory"] += burnt_calory
+    message = f"{workout_type} - {int(burnt_calory)} калорий."
+    
+    additional_water = 200 * workout_duration / 30
+    if (additional_water > 0):
+        message += f" Дополнительно: выпейте {int(additional_water)} мл воды."
+   
+    await msg.answer(message)
     
 @router.message(Command("load_test_user"))
-async def start_handler(msg: Message):
+async def load_test_user(msg: Message):
 
     weigth = 75
     heigth = 180
@@ -118,7 +140,8 @@ async def start_handler(msg: Message):
     data["current_water"] = 0
     data["calory_rate"] = calory_rate
     data["current_calory"] = 0
-    
+    data["burnt_calory"] = 0
+
     data["name"] = "Кирилл"
     data["city"] = city
     
