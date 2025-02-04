@@ -1,12 +1,16 @@
+import json
+import logging
 import random
 from aiogram import types, F, Router
 from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-import logging
+import requests
 
-from storage.states import UserForm
+from storage.states import FoodForm, UserForm
 from calculator.rate_calculator import calculate_water_rate, calculate_calory_rate
+
+open_food_url = "http://world.openfoodfacts.org"
 
 user_data = {}
 
@@ -150,6 +154,56 @@ async def check_progress(msg: Message):
     - Баланс: {int(current_calory - burnt_calory)} ккал.
     """
     await msg.answer(message)
+    
+@router.message(Command("log_food"))
+async def log_food(msg: Message, state: FSMContext):
+    if (msg.chat.id not in user_data.keys()):
+        await msg.answer(f"У вас нет активного профиля. Для создания выполните команду /set_profile")
+        return
+    
+    product_name = msg.text.split()[1]
+    
+    params = {
+        "categories_tags": {product_name}, 
+        "page_size": 10
+    }
+
+    request = open_food_url + "/api/v2/search"
+    response = requests.get(request, params = params)
+    json_data = json.loads(response.text)
+    # logging.info(f"json_data = {json_data}")
+    
+    energy_kcal = 0
+    for product in json_data["products"]:
+        nutriments = product["nutriments"]
+        if ("energy-kcal" in nutriments.keys()):
+            energy_kcal = nutriments["energy-kcal"]
+            break
+            
+    if (energy_kcal > 0):
+        await state.update_data(product_name=product_name)
+        await state.update_data(energy_kcal=energy_kcal)
+        await state.set_state(FoodForm.food_amount)
+        await msg.answer(f"{product_name} - {energy_kcal} ккал на 100 г. Сколько грамм вы съели?")
+    else:
+        await msg.answer(f"Указанный продукт не найден")
+    
+@router.message(FoodForm.food_amount)
+async def food_amount(msg: Message, state: FSMContext):
+    if (msg.chat.id not in user_data.keys()):
+        await msg.answer(f"У вас нет активного профиля. Для создания выполните команду /set_profile")
+        return
+    data = user_data[msg.chat.id]
+
+    food_amount = float(msg.text.split()[0])
+    state_data = await state.get_data()
+    energy_kcal = state_data.get("energy_kcal")
+    
+    consumed_calory = energy_kcal * float(food_amount / 100)
+    data["current_calory"] += consumed_calory
+    
+    await msg.answer(f"Записано: {int(consumed_calory)} ккал.")
+    await state.clear()
     
 @router.message(Command("load_test_user"))
 async def load_test_user(msg: Message):
