@@ -8,3 +8,6 @@ class UserForm(StatesGroup):
     activity_minutes = State()
     city = State()
     calory_target = State()
+    
+class FoodForm(StatesGroup):
+    food_amount = State()
