@@ -162,23 +162,8 @@ async def log_food(msg: Message, state: FSMContext):
         return
     
     product_name = msg.text.split()[1]
-    
-    params = {
-        "categories_tags": {product_name}, 
-        "page_size": 10
-    }
-
-    request = open_food_url + "/api/v2/search"
-    response = requests.get(request, params = params)
-    json_data = json.loads(response.text)
-    # logging.info(f"json_data = {json_data}")
-    
-    energy_kcal = 0
-    for product in json_data["products"]:
-        nutriments = product["nutriments"]
-        if ("energy-kcal" in nutriments.keys()):
-            energy_kcal = nutriments["energy-kcal"]
-            break
+    product_info = get_food_info(product_name)
+    energy_kcal = product_info.get("calories")
             
     if (energy_kcal > 0):
         await state.update_data(product_name=product_name)
@@ -231,3 +216,18 @@ async def load_test_user(msg: Message):
 
     await msg.answer(f"Ваш профиль = {user_data}")
     
+def get_food_info(product_name):
+    url = f"https://world.openfoodfacts.org/cgi/search.pl?action=process&search_terms={product_name}&json=true"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        products = data.get('products', [])
+        if products:  # Проверяем, есть ли найденные продукты
+            first_product = products[0]
+            return {
+                'name': first_product.get('product_name', 'Неизвестно'),
+                'calories': first_product.get('nutriments', {}).get('energy-kcal_100g', 0)
+            }
+        return None
+    logging.error(f"Error while calling food API. Status code = {response.status_code}")
+    return None
