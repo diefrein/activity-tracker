@@ -214,7 +214,7 @@ async def load_test_user(msg: Message):
     global user_data
     user_data[257377723] = data
 
-    await msg.answer(f"Ваш профиль = {user_data}")
+    await msg.answer(f"Создан тестовый профиль: {data}")
     
 def get_food_info(product_name):
     url = f"https://world.openfoodfacts.org/cgi/search.pl?action=process&search_terms={product_name}&json=true"
